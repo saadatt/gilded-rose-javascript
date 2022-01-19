@@ -1,58 +1,154 @@
 const { expect } = require('chai');
-const { Item, items, update_quality } = require('../src/gilded_rose');
+const { NAMES, ITEMS_DATA } = require('../src/constants');
+const {getItemData} = require('../src/helpers');
+const { Item, update_quality } = require('../src/gilded_rose');
+const { new_update_quality } = require('../src/gilded_rose_refactored');
 
-// function Item(name, sell_in, quality) {
-//   this.name = name;
-//   this.sell_in = sell_in;
-//   this.quality = quality;
-// }
+describe("Gilded Rose", function() {
 
-describe('Gilded Rose', () => {
+  let items;
 
-  // it("should do something", function() {
-  //   update_quality();
-  // });
-
-  //do not alter the Item class or items property as those belong to the goblin in the corner
-  it('should verify Item constructor is present', () => {
-    expect(Item).to.be.a('function');
+  beforeEach(() => {
+    items = [
+      new Item(NAMES.SULFURAS, ...getItemData(NAMES.SULFURAS)),
+      new Item(NAMES.DEX, ...getItemData(NAMES.DEX)),
+      new Item(NAMES.AGED, ...getItemData(NAMES.AGED)),
+      new Item(NAMES.ELIXIR, ...getItemData(NAMES.ELIXIR)),
+      new Item(NAMES.BACKSTAGE, ...getItemData(NAMES.BACKSTAGE)),
+      new Item(NAMES.CONJURED, ...getItemData(NAMES.CONJURED)),
+    ];
   });
 
-  it('should set an array of items', () => {
-    expect(items instanceof Array).to.be.true;
-    expect(items.length).to.be.greaterThan(0);
-  });
+  it('should verify new instance of Item class is succesfully created with matching data', () => {
+    const { name, sell_in, quality } = new Item(NAMES.AGED, ...getItemData(NAMES.AGED));
 
-  //We have a system in place that updates our inventory for us...
-  it('should verify the presence of an update_quality function', () => {
-    expect(update_quality).to.be.a('function');
-  });
+    const [matching_sell_in, matching_quality] = getItemData(NAMES.AGED)
 
-  // items have a sell_in value ...
-  it('should verify that an item has a sell_in parameter', () => {
-    const testItem = new Item('itemName', 2, 3);
-    expect(testItem.sell_in === 2).to.be.true;
-  });
+    expect(name).to.equal(NAMES.AGED);
+    expect(sell_in).to.equal(matching_sell_in);
+    expect(quality).to.equal(matching_quality);
+  })
 
-  //items have a quality value ...
-  it('should verify that an item has a quality parameter', () => {
-    const testItem = new Item('itemName', 2, 3);
-    expect(testItem.quality === 3).not.to.be.false;
-  });
-
-  // At the end of each day our system lowers both values for every item
-  it('should verify sell_in value goes down each day', () => {
-    const previous_sell_in = items[0].sell_in;
-    const previous_quality = items[0].quality;
+  // The Quality of an item is never more than 50
+  it('should verify update_quality f-n correctly updates "Sulfuras"', () => {
     update_quality(items);
-    expect(items[0].sell_in).to.be.lessThan(previous_sell_in);
-    expect(items[0].quality).to.be.lessThan(previous_quality);
-  });
 
-  // Once the sell_in days is less then zero, quality degrades twice as fast
-  it('should verify quality degrades twice as fast once sell_in value is below 0', () => {
-    items.push(new Item('testItem', 0, 5));
-    update_quality();
-    expect(items[items.length - 1].quality).to.equal(3);
+    const [{name, sell_in, quality}] = items;
+
+    const [matching_sell_in, matching_quality] = getItemData(NAMES.SULFURAS)
+
+    expect(name).to.equal(NAMES.SULFURAS);
+    expect(sell_in).to.equal(matching_sell_in);
+    expect(quality).to.equal(matching_quality);
   });
 });
+
+describe("Gilded Rose over new_update_function", function() {
+
+  let items;
+
+  beforeEach(() => {
+    items = [
+      new Item(NAMES.SULFURAS, ...getItemData(NAMES.SULFURAS)),
+      new Item(NAMES.DEX, ...getItemData(NAMES.DEX)),
+      new Item(NAMES.AGED, ...getItemData(NAMES.AGED)),
+      new Item(NAMES.ELIXIR, ...getItemData(NAMES.ELIXIR)),
+      new Item(NAMES.BACKSTAGE, ...getItemData(NAMES.BACKSTAGE)),
+      new Item(NAMES.CONJURED, ...getItemData(NAMES.CONJURED)),
+    ];
+  });
+
+  it('should verify a new_update_quality f-n returns an array of items ', () => {
+    const new_updated_quality_result = new_update_quality(items);
+
+    expect(new_updated_quality_result instanceof Array).to.be.true;
+    expect(new_updated_quality_result.length).to.equal(Object.values(ITEMS_DATA).length);
+  })
+
+  // At the end of each day our system lowers both values
+  it('should verify the sell_in value goes down every day', () => {
+    const [, {sell_in}] = new_update_quality(items);
+
+    expect(sell_in).to.equal(items[1].sell_in - 1);
+  });
+
+  it('should verify the sell_in value for "Sulfarus" does not go down', () => {
+    const [{sell_in}] = new_update_quality(items);
+
+    expect(sell_in).to.equal(items[0].sell_in);
+  });
+
+  it('should verify quality of the regular item decreases day by day', () => {
+    const [, {quality}] = new_update_quality(items);
+
+    expect(quality).to.equal(items[1].quality - 1);
+  });
+
+  it('should verify quality of the regular item decreases faster as its sell_in gets below zero', () => {
+    items[1].sell_in = - 1;
+    const [, {quality}]  = new_update_quality(items);
+
+    expect(quality).to.equal(items[1].quality - 2);
+  });
+
+  it('should verify the "Aged Brie" and Backstage increases in its quality the older it gets', () => {
+    const [, ,{quality}]  = new_update_quality(items);
+
+    expect(quality).to.equal(items[2].quality + 1);
+  });
+
+  it('should verify quality of the Aged Brie will increase by 1 more as sell_in gets below zero', () => {
+    items[2].sell_in = - 1;
+    const [,, {quality}]  = new_update_quality(items);
+
+    expect(quality).to.equal(items[2].quality + 2);
+  });
+
+  it('should verify quality of the Backstage goes up by 2 as its sell_in gets below 11, and it never gets above 50 in its quality', () => {
+    items[4].sell_in = 10;
+    const [,,,, {quality}]  = new_update_quality(items);
+
+    expect(quality).to.equal(items[4].quality + 2);
+  });
+
+  it('should verify quality of the Backstage goes up by 3 as its sell_in gets below 6, and it never gets above 50 in its quality', () => {
+    items[4].sell_in = 5;
+    const [,,,, {quality}]  = new_update_quality(items);
+
+    expect(quality).to.equal(items[4].quality + 3);
+  });
+
+  it('should verify quality of the Backstage passes drops to 0 after the concert', () => {
+    items[4].sell_in = - 1;
+    const [,,,, {quality}]  = new_update_quality(items);
+
+    expect(quality).to.equal(0);
+  });
+
+  //At the end of each day our system lowers both values for every item
+  it('should verify the quality of regular items goes down at the end of each day', () => {
+    console.log(items)
+    const [, {quality}] = new_update_quality(items);
+    expect(quality).to.equal(items[1].quality - 1);
+  });
+
+  it('should verify the quality of "Sulfuras" product always stays at 80', () => {
+    console.log(items)
+    const [{quality}] = new_update_quality(items);
+    expect(quality).to.equal(80);
+  });
+
+  it('should verify quality of "Conjured" item decreases in quality twice as fast as normal items', () => {
+    console.log(items);
+    const [,,,,, {quality}]  = new_update_quality(items);
+    expect(quality).to.equal(items[5].quality - 2);
+  });
+
+  it('should verify that quality of any item except Sulfuras never gets more than 50', () => {
+    items[2].quality = 50;
+    const [,, {quality}] = new_update_quality(items);
+    expect( quality).to.equal(50);
+  });
+
+});
+
