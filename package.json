@@ -4,7 +4,7 @@
   "description": "If you want to get cracking on the JavaScript source then do this:",
   "main": "src/gilded_rose.js",
   "scripts": {
-    "test": "mocha --compilers js:babel/register"
+    "test": "mocha --require coffeescript/register \"spec/**/*.js"
   },
   "repository": {
     "type": "git",
@@ -18,8 +18,10 @@
   "homepage": "https://github.com/saadatt/gilded-rose-javascript#readme",
   "dependencies": {},
   "devDependencies": {
+    "@babel/cli": "^7.16.8",
     "babel": "^6.23.0",
     "chai": "^4.3.4",
+    "coffeescript": "^2.6.1",
     "mocha": "^9.1.4"
   }
 }
